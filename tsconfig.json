@@ -4,6 +4,5 @@
         "types": [],
         "target": "esnext",
         "experimentalDecorators": true
-    },
-    "include": ["./src/defines.d.ts"]
+    }
 }

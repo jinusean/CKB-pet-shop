@@ -3,12 +3,11 @@ const path = require('path');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const webpack = require('webpack');
 
-
 module.exports = {
     entry: './src/ui/index.tsx',
     output: {
         filename: 'bundle.js',
-        path: path.join(__dirname, '/../dist'),
+        path: path.join(__dirname, '/dist'),
     },
     mode: 'development',
     devtool: 'source-map',

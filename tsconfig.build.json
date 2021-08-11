@@ -20,5 +20,5 @@
         "rootDir": "./",
         "outDir": "./dist/js",
     },
-    "include": ["./src/**/*", "./dist/ts/**/*", "./schemas/*.json", "./build/**/*.json"],
+    "include": ["./src/**/*", "./dist/ts/**/*", "./schemas/*.json", "./build/**/*.json", ]
   }

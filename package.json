@@ -25,6 +25,7 @@
     },
     "types": "dist/js/src/index.d.ts",
     "dependencies": {
+        "@metamask/detect-provider": "^1.2.0",
         "@openzeppelin/test-helpers": "^0.5.12",
         "@polyjuice-provider/web3": "0.0.1-rc6",
         "jquery": "^3.6.0",

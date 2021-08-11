@@ -2,29 +2,126 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-use-before-define */
 
-import React, {useEffect, useState} from 'react';
+// @ts-ignore
+import React, {useCallback, useEffect, useState} from 'react';
 import Web3 from 'web3';
 import {ToastContainer, toast} from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import '../css/bootstrap.min.css'
-import '../js/bootstrap.min'
 
 import './app.scss';
 import {PolyjuiceHttpProvider} from '@polyjuice-provider/web3';
 import {AddressTranslator} from 'nervos-godwoken-integration';
+import detectEthereumProvider from '@metamask/detect-provider';
 
 import {AdoptionWrapper} from '../lib/contracts/AdoptionWrapper';
 import {CONFIG} from '../config';
 import pets from '../pets';
-import {log} from "util";
-import {SimpleStorageWrapper} from "../../../blockchain-workshop-godwoken-simple/src/lib/contracts/SimpleStorageWrapper";
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 
-async function createWeb3() {
-    // Modern dapp browsers...
-    if ((window as any).ethereum) {
+export function App() {
+    const [provider, setProvider] = useState<any>();
+    const [web3, setWeb3] = useState<Web3>();
+    const [account, setAccount] = useState<string>();
+    const [adopters, setAdopters] = useState<string[]>();
+    const [contract, setContract] = useState<AdoptionWrapper>();
+    const [polyjuiceAddress, setPolyjuiceAddress] = useState<string | undefined>();
+    const [l2Balance, setL2Balance] = useState<bigint>();
+    const [transactionInProgress, setTransactionInProgress] = useState(false);
+    const toastId = React.useRef(null);
+
+    const handleAccountsChanged = useCallback((accounts: Array<string>) => {
+        const [_account] = accounts;
+        setAccount(_account);
+
+        if (_account) {
+            toast('Wallet connected')
+        } else {
+            toast.warning('Wallet disconnected')
+        }
+    }, [account])
+
+    async function fetchAdopters() {
+        const _adopters = await contract.getAdopters();
+        setAdopters(_adopters);
+    }
+
+    const adoptPet = useCallback(async (petId: number) => {
+        try {
+            setTransactionInProgress(true);
+            await contract.adopt(petId, account);
+            toast('Adopted pet :)');
+            await fetchAdopters();
+        } catch (error) {
+            console.error(error);
+            toast.error('There was an error adopting your pet');
+        } finally {
+            setTransactionInProgress(false);
+        }
+    }, [contract, account]);
+
+    const abandonPet = useCallback(
+        async(petId: number) => {
+            try {
+                setTransactionInProgress(true);
+                await contract.abandon(petId, account);
+                toast('Abandoned pet :(');
+                await fetchAdopters();
+            } catch (error) {
+                console.error(error);
+                toast.error('There was an error abandoning your pet');
+            } finally {
+                setTransactionInProgress(false);
+            }
+        }, [contract, account]);
+
+    useEffect(() => {
+        (async function () {
+            const _provider = (await detectEthereumProvider() as any);
+            if (!_provider) {
+                return console.log('No provider detected, consider using metamask');
+            }
+            setProvider(_provider);
+
+            const godwokenRpcUrl = CONFIG.WEB3_PROVIDER_URL;
+            const providerConfig = {
+                rollupTypeHash: CONFIG.ROLLUP_TYPE_HASH,
+                ethAccountLockCodeHash: CONFIG.ETH_ACCOUNT_LOCK_CODE_HASH,
+                web3Url: godwokenRpcUrl
+            };
+
+            const httpProvider = new PolyjuiceHttpProvider(godwokenRpcUrl, providerConfig);
+            const _web3 = new Web3(httpProvider || Web3.givenProvider);
+            setWeb3(_web3);
+        })();
+    }, [])
+
+    useEffect(() => {
+        if (!provider) {
+            return
+        } else if (provider !== window.ethereum) {
+            console.error('Do you have multiple wallets installed?');
+            toast.error('Unknown wallet provider.')
+        }
+
+
+        provider.on('accountsChanged', handleAccountsChanged);
+        provider.request({ method: 'eth_accounts'}).then(async (accounts: Array<string>) => {
+            if (accounts.length) {
+                // only requestAccount if accounts are already accessible
+                try {
+                    const accounts = await provider.request({method: 'eth_requestAccounts'});
+                    await handleAccountsChanged(accounts)
+                } catch (error) {
+                    if (error?.code === -32002) {
+                        // already pending
+                        return toast.info('Please open Metamask to confirm.')
+                    }
+                    console.error(error)
+                }
+            }
+        })
+
         const godwokenRpcUrl = CONFIG.WEB3_PROVIDER_URL;
         const providerConfig = {
             rollupTypeHash: CONFIG.ROLLUP_TYPE_HASH,
@@ -32,134 +129,77 @@ async function createWeb3() {
             web3Url: godwokenRpcUrl
         };
 
-        const provider = new PolyjuiceHttpProvider(godwokenRpcUrl, providerConfig);
-        // const provider = new Web3.providers.HttpProvider('http://localhost:8545')
-        const web3 = new Web3(provider || Web3.givenProvider);
-        try {
-            // Request account access if needed
-            await (window as any).ethereum.enable();
-        } catch (error) {
-            console.error('Error requesting access')
-            console.error(error)
-
-            // User denied account access...
-        }
-
-        return web3;
-    }
-
-    console.log('Non-Ethereum browser detected. You should consider trying MetaMask!');
-    return null;
-}
-
-export function App() {
-    const [web3, setWeb3] = useState<Web3>(null);
-    const [contract, setContract] = useState<AdoptionWrapper>();
-    const [accounts, setAccounts] = useState<string[]>();
-    const [adopters, setAdopters] = useState<string[]>();
-    const [deployTxHash, setDeployTxHash] = useState<string | undefined>();
-    const [transactionInProgress, setTransactionInProgress] = useState(false);
-    const [polyjuiceAddress, setPolyjuiceAddress] = useState<string | undefined>();
-    const [l2Balance, setL2Balance] = useState<bigint>();
-    const [existingContractIdInputValue, setExistingContractIdInputValue] = useState<string | undefined>();
-    async function fetchAdopters() {
-        const _adopters = await contract.getAdopters();
-        setAdopters(_adopters);
-        console.log('adopters', _adopters);
-    }
-
-    async function adoptPet(pet: any) {
-        await contract.adopt(pet.id, ethAccount);
-        toast('Adopted pet :)');
-        await fetchAdopters();
-    }
-
-    async function abandonPet(pet: any) {
-        await contract.abandon(pet.id, ethAccount);
-        toast('Abandoned pet :(');
-        await fetchAdopters();
-    }
-
-    async function setExistingContractAddress(contractAddress: string) {
-        const _contract = new AdoptionWrapper(web3);
-        _contract.useDeployed(contractAddress.trim());
-
-        setContract(_contract);
-    }
-
-    async function deployContract() {
-        const _contract = new AdoptionWrapper(web3);
-
-        try {
-            setDeployTxHash(undefined);
-            setTransactionInProgress(true);
-            const transactionHash = await _contract.deploy(ethAccount);
-
-            setDeployTxHash(transactionHash);
-            setExistingContractAddress(_contract.address);
-            toast(
-                'Successfully deployed a smart-contract. You can now proceed to get or set the value in a smart contract.',
-                {type: 'success'}
-            );
-        } catch (error) {
-            console.error(error);
-            toast.error(
-                'There was an error sending your transaction. Please check developer console.'
-            );
-        } finally {
-            setTransactionInProgress(false);
-        }
-    }
+        const httpProvider = new PolyjuiceHttpProvider(godwokenRpcUrl, providerConfig);
+        const _web3 = new Web3(httpProvider || Web3.givenProvider);
+        setWeb3(_web3);
+    }, [provider])
 
     useEffect(() => {
-        if (accounts?.[0]) {
-            const addressTranslator = new AddressTranslator();
-            setPolyjuiceAddress(addressTranslator.ethAddressToGodwokenShortAddress(accounts?.[0]));
-        } else {
-            setPolyjuiceAddress(undefined);
-        }
-    }, [accounts?.[0]]);
-
-
-    useEffect(() => {
-        if (web3) {
-            return;
-        }
-
-        (async () => {
-            const _web3 = await createWeb3();
-            setWeb3(_web3);
-
-            const _accounts = [(window as any).ethereum.selectedAddress];
-            setAccounts(_accounts);
-
-            if (_accounts && _accounts[0]) {
-                // This is using the polyjuice provider, so it is different from the eth address
-                const _l2Balance = BigInt(await _web3.eth.getBalance(_accounts[0]));
-                setL2Balance(_l2Balance);
-            }
-        })();
-    }, [web3]);
-
-    useEffect(() => {
-        if (contract || !web3) {
+        if (!web3) {
             return
         }
-        const contractAddress = '0xD5f3cA08F47B564349F8d13282c8BA2F9dB60ea9';
-        setExistingContractAddress(contractAddress);
+        setContract(new AdoptionWrapper(web3, CONFIG.CONTRACT_ADDRESS));
     }, [web3])
 
     useEffect(() => {
-        if (adopters || !contract?.address) {
+        if (!contract) {
             return
         }
-
-        fetchAdopters()
-
-    }, [contract])
+        fetchAdopters();
+    }, [contract]);
 
 
-    const ethAccount = accounts?.[0].toLowerCase();
+    useEffect(() => {
+        if (account) {
+            const addressTranslator = new AddressTranslator();
+            setPolyjuiceAddress(addressTranslator.ethAddressToGodwokenShortAddress(account));
+
+            web3.eth.getBalance(account).then((_l2Balance: string) => setL2Balance(BigInt(_l2Balance)));
+        } else {
+            setPolyjuiceAddress(undefined);
+            setL2Balance(undefined);
+        }
+    }, [account])
+
+
+    useEffect(() => {
+        if (transactionInProgress && !toastId.current) {
+            toastId.current = toast.info(
+                'Transaction in progress. Confirm MetaMask signing dialog and please wait...',
+                {
+                    position: 'top-right',
+                    autoClose: false,
+                    hideProgressBar: false,
+                    closeOnClick: false,
+                    pauseOnHover: true,
+                    draggable: true,
+                    progress: undefined,
+                    closeButton: false
+                }
+            );
+        } else if (!transactionInProgress && toastId.current) {
+            toast.dismiss(toastId.current);
+            toastId.current = null;
+        }
+    }, [transactionInProgress, toastId.current]);
+
+    function getPetActions(petId: number) {
+        if (account && adopters?.[petId] === ZERO_ADDRESS) {
+            return (<button className="btn btn-success w-100" type="button" disabled={transactionInProgress}
+                            onClick={() => adoptPet(petId)}>Adopt</button>);
+        } else if (adopters && adopters[petId].toLowerCase() === polyjuiceAddress) {
+            return (<div>
+                <button className="btn btn-warning w-100" type="button"
+                        disabled={transactionInProgress}
+                        onClick={() => abandonPet(petId)}>Abandon
+                </button>
+            </div>)
+        } else {
+            return (<br />)
+        }
+    }
+
+
     // @ts-ignore
     return (
         <div>
@@ -167,81 +207,58 @@ export function App() {
                 <h1 className="text-center">Pet Shop</h1>
 
                 <hr/>
-
                 <div>
-                    Your ETH address: <b>{accounts?.[0]}</b>
-                    <br />
-                    Your Polyjuice address: <b>{polyjuiceAddress || ' - '}</b>
-                    <br />
-                    Nervos Layer 2 balance: <b>{l2Balance ? (l2Balance / 10n ** 8n).toString() + ' CKB' : ' - '}</b>
-                    <br />
-                    Deployed contract address: <b>{contract?.address || '-'}</b> <br />
-                    Deploy transaction hash: <b>{deployTxHash || '-'}</b>
-                    <br />
-
-                    <div>
-                        <button onClick={deployContract} disabled={!l2Balance}>
-                            Deploy contract
-                        </button>
-                        &nbsp;or&nbsp;
-                        <input
-                            placeholder="Existing contract id"
-                            onChange={e => setExistingContractIdInputValue(e.target.value)}
-                        />
-                        <button
-                            disabled={!existingContractIdInputValue || !l2Balance}
-                            onClick={() => setExistingContractAddress(existingContractIdInputValue)}
-                        >
-                            Use existing contract
-                        </button>
-                    </div>
+                    { provider && !account && <button className="btn btn-primary" onClick={() => provider.request({method: 'eth_requestAccounts'})}>Enable Ethereum</button>}
+                    { account && (
+                        <div>
+                            Your ETH address: <b>{account}</b>
+                            <br/>
+                            Your Polyjuice address: <b>{polyjuiceAddress || ' - '}</b>
+                            <br/>
+                            Nervos Layer 2 balance: <b>{l2Balance ? (l2Balance / 10n ** 8n).toString() + ' CKB' : ' - '}</b>
+                            <br/>
+                            Contract address: <b>{contract?.address || '-'}</b> <br/>
+                        </div>
+                    )}
                 </div>
+
 
                 <hr/>
 
 
-                <div id="petsRow" className="row">
+                <div className="row">
                     {pets.map(function (pet) {
-                        return (<div key={pet.id} style={{display: null}}>
-                            <div className="col-sm-6 col-md-4 col-lg-3">
-                                <div className="panel panel-default panel-pet">
-                                    <div className="panel-heading">
-                                        <h3 className="panel-title">{pet.name}</h3>
+                        return (
+                            <div className="col-sm-12 col-md-6 col-lg-4 mb-4" key={pet.id} >
+                                <div className="card">
+                                    <img alt="nothing"
+                                         className="card-img-top"
+                                         src={`../images/${pet.breed.toLowerCase().replace(/\s/g, '-')}.jpeg`}
+                                         data-holder-rendered="true"/>
+
+                                    <div className="card-body">
+                                        <h3 className="card-title">{pet.name}</h3>
+                                        <div className="card-text">
+                                            {adopters && adopters?.[pet.id] !== ZERO_ADDRESS &&
+                                            <div className="text-truncate"><strong>Owner:</strong> <span>{adopters?.[pet.id]}</span></div>
+                                            }
+                                            <strong>Breed</strong>: <span className="pet-breed">{pet.breed}</span><br/>
+                                            <strong>Age</strong>: <span className="pet-age">{pet.age}</span><br/>
+                                            <strong>Location</strong>: <span
+                                            className="pet-location">{pet.location}</span>
+                                        </div>
                                     </div>
-                                    <div className="panel-body">
-                                        <img alt="nothing"
-                                             className="img-rounded img-center"
-                                             style={{width: '100%'}}
-                                             src={`../../images/${pet.breed.toLowerCase().replace(/\s/g, '-')}.jpeg`}
-                                             data-holder-rendered="true"/>
-                                        <br/><br/>
-                                        <strong>Breed</strong>: <span className="pet-breed">{pet.breed}</span><br/>
-                                        <strong>Age</strong>: <span className="pet-age">{pet.age}</span><br/>
-                                        <strong>Location</strong>: <span className="pet-location">{pet.location}</span><br/>
-                                        {adopters?.[pet.id] === ZERO_ADDRESS &&
-                                            <button className="btn btn-default" type="button"
-                                                    onClick={() => adoptPet(pet)}>Adopt
-                                            </button>
-                                        }
-                                        {adopters?.[pet.id].toLowerCase() === polyjuiceAddress &&
-                                            <div>
-                                                <strong>Owner:</strong> <span>{adopters?.[pet.id]}</span><br/>
-                                                <button className="btn btn-warning" type="button"
-                                                        onClick={() => abandonPet(pet)}>Abandon
-                                                </button>
-                                            </div>
-
-                                        }
-
+                                    <div className="card-footer">
+                                        {getPetActions(pet.id)}
                                     </div>
                                 </div>
                             </div>
-                        </div>)
+                        )
                     })}
                 </div>
             </div>
 
-            <ToastContainer/>
+            <ToastContainer newestOnTop={true} />
         </div>
     );
 }
