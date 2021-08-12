@@ -1,9 +1,8 @@
 # Blockchain workshop
 
+https://user-images.githubusercontent.com/6874981/129195934-4b6c5ded-f812-4949-b47f-5e9bc388acd7.mp4
+
 This project makes use of `@truffle/hdwallet-provider` & `truffle` for contract migrations.
-
-![Preview](https://youtu.be/Y0wJRDNO2yY)
-
 
 ## Install Dependencies
 ```
