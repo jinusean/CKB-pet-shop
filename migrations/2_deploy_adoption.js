@@ -1,5 +1,5 @@
-var Adoption = artifacts.require('Adoption');
+const Adoption = artifacts.require('Adoption')
 
-module.exports = function (deployer) {
-    deployer.deploy(Adoption, { overwrite: true });
-};
+module.exports = deployer => {
+    deployer.deploy(Adoption, { overwrite: true })
+}

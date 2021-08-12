@@ -1,59 +1,35 @@
-import Web3 from 'web3';
-// @ts-ignore
-import * as AdoptionJSON from '../../../build/contracts/Adoption.json';
-import { Adoption } from '../../types/Adoption';
-
-const DEFAULT_SEND_OPTIONS = {
-    gas: 6000000
-};
+import Web3 from 'web3'
+import * as AdoptionJSON from '../../../build/contracts/Adoption.json'
+import { Adoption } from '../../types/Adoption'
 
 export class AdoptionWrapper {
-    web3: Web3;
+    web3: Web3
 
-    contract: Adoption;
+    contract: Adoption
 
-    address: string;
-
-    constructor(web3: Web3, address: string) {
-        this.web3 = web3;
-        this.contract = new web3.eth.Contract(AdoptionJSON.abi as any) as any;
-        this.address = address;
-        this.contract.options.address = address;
+    constructor(web3: Web3) {
+        this.web3 = web3
+        this.contract = new web3.eth.Contract(
+            AdoptionJSON.abi as any,
+            (AdoptionJSON.networks as any)[process.env.NETWORK_ID].address
+        ) as any
     }
 
-    get isDeployed() {
-        return Boolean(this.address);
+    get address() {
+        return this.contract.options.address
     }
 
     async getAdopters() {
-        const data = await this.contract.methods.getAdopters().call();
-        return data
+        return this.contract.methods.getAdopters().call()
     }
 
     async adopt(petId: number, fromAddress: string) {
-        const returnedId = await this.contract.methods.adopt(petId).send({...DEFAULT_SEND_OPTIONS, from: fromAddress })
-        return returnedId
+        return this.contract.methods.adopt(petId).send({ gas: process.env.GAS, from: fromAddress })
     }
 
     async abandon(petId: number, fromAddress: string) {
-        const returnedId = await this.contract.methods.abandon(petId).send({ ...DEFAULT_SEND_OPTIONS, from: fromAddress })
-        return returnedId
-    }
-
-    async deploy(fromAddress: string) {
-        const contract = await (this.contract
-            .deploy({
-                data: AdoptionJSON.bytecode,
-                arguments: []
-            })
-            .send({
-                ...DEFAULT_SEND_OPTIONS,
-                from: fromAddress,
-                to: '0x0000000000000000000000000000000000000000'
-            } as any) as any);
-
-        this.address = contract.contractAddress;
-
-        return contract.transactionHash;
+        return this.contract.methods
+            .abandon(petId)
+            .send({ gas: process.env.GAS, from: fromAddress })
     }
 }

@@ -1,14 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import Web3 from 'web3'
 import { ToastContainer, toast } from 'react-toastify'
-
-import './app.scss'
 import { PolyjuiceHttpProvider } from '@polyjuice-provider/web3'
 import { AddressTranslator } from 'nervos-godwoken-integration'
 import detectEthereumProvider from '@metamask/detect-provider'
 
+import './app.scss'
 import { AdoptionWrapper } from '../lib/contracts/AdoptionWrapper'
-import { CONFIG, ZERO_ADDRESS } from '../config'
+import { ZERO_ADDRESS } from '../lib/constants'
 import pets from '../pets'
 
 const LoadingIndicator = () => <span className="rotating-icon">⚙️</span>
@@ -99,14 +98,16 @@ export function App() {
             }
             setProvider(_provider)
 
-            const godwokenRpcUrl = CONFIG.WEB3_PROVIDER_URL
             const providerConfig = {
-                rollupTypeHash: CONFIG.ROLLUP_TYPE_HASH,
-                ethAccountLockCodeHash: CONFIG.ETH_ACCOUNT_LOCK_CODE_HASH,
-                web3Url: godwokenRpcUrl
+                rollupTypeHash: process.env.ROLLUP_TYPE_HASH,
+                ethAccountLockCodeHash: process.env.ETH_ACCOUNT_LOCK_CODE_HASH,
+                web3Url: process.env.WEB3_PROVIDER_URL
             }
 
-            const httpProvider = new PolyjuiceHttpProvider(godwokenRpcUrl, providerConfig)
+            const httpProvider = new PolyjuiceHttpProvider(
+                process.env.WEB3_PROVIDER_URL,
+                providerConfig
+            )
             const _web3 = new Web3(httpProvider || Web3.givenProvider)
             setWeb3(_web3)
         })()
@@ -139,10 +140,10 @@ export function App() {
             }
         })
 
-        const godwokenRpcUrl = CONFIG.WEB3_PROVIDER_URL
+        const godwokenRpcUrl = process.env.WEB3_PROVIDER_URL
         const providerConfig = {
-            rollupTypeHash: CONFIG.ROLLUP_TYPE_HASH,
-            ethAccountLockCodeHash: CONFIG.ETH_ACCOUNT_LOCK_CODE_HASH,
+            rollupTypeHash: process.env.ROLLUP_TYPE_HASH,
+            ethAccountLockCodeHash: process.env.ETH_ACCOUNT_LOCK_CODE_HASH,
             web3Url: godwokenRpcUrl
         }
 
@@ -155,13 +156,14 @@ export function App() {
         if (!web3) {
             return
         }
-        setContract(new AdoptionWrapper(web3, CONFIG.CONTRACT_ADDRESS))
+        setContract(new AdoptionWrapper(web3))
     }, [web3])
 
     useEffect(() => {
         if (!contract) {
             return
         }
+
         fetchAdopters()
     }, [contract])
 
@@ -169,7 +171,6 @@ export function App() {
         if (account) {
             const addressTranslator = new AddressTranslator()
             setPolyjuiceAddress(addressTranslator.ethAddressToGodwokenShortAddress(account))
-
             web3.eth
                 .getBalance(account)
                 .then((_l2Balance: string) => setL2Balance(BigInt(_l2Balance)))

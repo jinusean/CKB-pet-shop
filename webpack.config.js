@@ -1,17 +1,21 @@
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const path = require('path');
-const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
-const webpack = require('webpack');
+/* eslint @typescript-eslint/no-var-requires: "off" */
+
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+const path = require('path')
+const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin')
+const webpack = require('webpack')
+const Dotenv = require('dotenv-webpack')
 
 module.exports = {
     entry: './src/ui/index.tsx',
     output: {
         filename: 'bundle.js',
-        path: path.join(__dirname, '/dist'),
+        path: path.join(__dirname, '/dist')
     },
     mode: 'development',
     devtool: 'source-map',
     plugins: [
+        new Dotenv(),
         new ForkTsCheckerWebpackPlugin(),
         new HtmlWebpackPlugin({
             template: './src/ui/app.ejs',
@@ -74,8 +78,8 @@ module.exports = {
                 type: 'asset/resource'
             },
             {
-              test: /\.(eot|ttf|woff|woff2)$/,
-              loader: 'file-loader'
+                test: /\.(eot|ttf|woff|woff2)$/,
+                loader: 'file-loader'
             },
 
             // All output '.js' files will have any sourcemaps re-processed by 'source-map-loader'.
@@ -92,4 +96,4 @@ module.exports = {
             }
         ]
     }
-};
+}

@@ -2,7 +2,8 @@ module.exports = {
     "env": {
         "browser": true,
         "es6": true,
-        "node": true
+        "node": true,
+        "truffle/truffle": true
     },
     "extends": [
         "airbnb-base",
@@ -22,7 +23,8 @@ module.exports = {
         "sourceType": "module"
     },
     "plugins": [
-        "@typescript-eslint"
+        "@typescript-eslint",
+        "truffle"
     ],
     "rules": {
         "@typescript-eslint/explicit-function-return-type": "off",
@@ -30,6 +32,7 @@ module.exports = {
             "prefixWithI": "always"
         }],
         "@typescript-eslint/no-unused-vars": "error",
+        "@typescript-eslint/no-var-requires": "off",
         "no-await-in-loop": "off",
         "no-plusplus": "off",
         "no-console": "off",
