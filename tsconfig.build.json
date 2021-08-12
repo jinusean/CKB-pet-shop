@@ -20,5 +20,6 @@
         "rootDir": "./",
         "outDir": "./dist/js",
     },
-    "include": ["./src/**/*", "./dist/ts/**/*", "./schemas/*.json", "./build/**/*.json", ]
+    "types": ["ethereum-protocol"],
+    "include": ["./src/**/*", "./dist/ts/**/*", "./schemas/*.json", "./build/**/*.json"]
   }

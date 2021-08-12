@@ -1,130 +1,114 @@
 export default [
     {
-        "id": 0,
-        "name": "Frieda",
-        "picture": "images/scottish-terrier.jpeg",
-        "age": 3,
-        "breed": "Scottish Terrier",
-        "location": "Lisco, Alabama"
+        id: 13,
+        name: 'Kristina',
+        age: 4,
+        breed: 'Samoyed',
+        location: 'Sultana, Massachusetts'
     },
     {
-        "id": 1,
-        "name": "Gina",
-        "picture": "images/scottish-terrier.jpeg",
-        "age": 3,
-        "breed": "Scottish Terrier",
-        "location": "Tooleville, West Virginia"
+        id: 14,
+        name: 'Ethel',
+        age: 2,
+        breed: 'Pomeranian',
+        location: 'Broadlands, Oregon'
     },
     {
-        "id": 2,
-        "name": "Collins",
-        "picture": "images/french-bulldog.jpeg",
-        "age": 2,
-        "breed": "French Bulldog",
-        "location": "Freeburn, Idaho"
+        id: 7,
+        name: 'Coleman',
+        age: 3,
+        breed: 'Golden Retriever',
+        location: 'Jacksonwald, Palau'
     },
     {
-        "id": 3,
-        "name": "Melissa",
-        "picture": "images/boxer.jpeg",
-        "age": 2,
-        "breed": "Boxer",
-        "location": "Camas, Pennsylvania"
+        id: 9,
+        name: 'Fran',
+        age: 3,
+        breed: 'Pikachu',
+        location: 'Matheny, Utah'
     },
     {
-        "id": 4,
-        "name": "Jeanine",
-        "picture": "images/french-bulldog.jpeg",
-        "age": 2,
-        "breed": "French Bulldog",
-        "location": "Gerber, South Dakota"
+        id: 4,
+        name: 'Jeanine',
+        age: 2,
+        breed: 'French Bulldog',
+        location: 'Gerber, South Dakota'
     },
     {
-        "id": 5,
-        "name": "Elvia",
-        "picture": "images/french-bulldog.jpeg",
-        "age": 3,
-        "breed": "French Bulldog",
-        "location": "Innsbrook, Illinois"
+        id: 3,
+        name: 'Melissa',
+        age: 2,
+        breed: 'Boxer',
+        location: 'Camas, Pennsylvania'
     },
     {
-        "id": 6,
-        "name": "Latisha",
-        "picture": "images/golden-retriever.jpeg",
-        "age": 3,
-        "breed": "Golden Retriever",
-        "location": "Soudan, Louisiana"
+        id: 10,
+        name: 'Leonor',
+        age: 2,
+        breed: 'Boxer',
+        location: 'Tyhee, Indiana'
     },
     {
-        "id": 7,
-        "name": "Coleman",
-        "picture": "../images/golden-retriever.jpeg",
-        "age": 3,
-        "breed": "Golden Retriever",
-        "location": "Jacksonwald, Palau"
+        id: 2,
+        name: 'Collins',
+        age: 2,
+        breed: 'French Bulldog',
+        location: 'Freeburn, Idaho'
     },
     {
-        "id": 8,
-        "name": "Nichole",
-        "picture": "images/french-bulldog.jpeg",
-        "age": 2,
-        "breed": "French Bulldog",
-        "location": "Honolulu, Hawaii"
+        id: 8,
+        name: 'Nichole',
+        age: 2,
+        breed: 'French Bulldog',
+        location: 'Honolulu, Hawaii'
     },
     {
-        "id": 9,
-        "name": "Fran",
-        "picture": "images/boxer.jpeg",
-        "age": 3,
-        "breed": "Boxer",
-        "location": "Matheny, Utah"
+        id: 11,
+        name: 'Dean',
+        age: 3,
+        breed: 'Ugly',
+        location: 'Windsor, Montana'
     },
     {
-        "id": 10,
-        "name": "Leonor",
-        "picture": "images/boxer.jpeg",
-        "age": 2,
-        "breed": "Boxer",
-        "location": "Tyhee, Indiana"
+        id: 1,
+        name: 'Gina',
+        age: 3,
+        breed: 'Scottish Terrier',
+        location: 'Tooleville, West Virginia'
     },
     {
-        "id": 11,
-        "name": "Dean",
-        "picture": "images/scottish-terrier.jpeg",
-        "age": 3,
-        "breed": "Scottish Terrier",
-        "location": "Windsor, Montana"
+        id: 5,
+        name: 'Elvia',
+        age: 3,
+        breed: 'French Bulldog',
+        location: 'Innsbrook, Illinois'
     },
     {
-        "id": 12,
-        "name": "Stevenson",
-        "picture": "images/french-bulldog.jpeg",
-        "age": 3,
-        "breed": "French Bulldog",
-        "location": "Kingstowne, Nevada"
+        id: 0,
+        name: 'Frieda',
+        age: 3,
+        breed: 'Scottish Terrier',
+        location: 'Lisco, Alabama'
     },
     {
-        "id": 13,
-        "name": "Kristina",
-        "picture": "images/golden-retriever.jpeg",
-        "age": 4,
-        "breed": "Golden Retriever",
-        "location": "Sultana, Massachusetts"
+        id: 6,
+        name: 'Latisha',
+        age: 3,
+        breed: 'Golden Retriever',
+        location: 'Soudan, Louisiana'
     },
     {
-        "id": 14,
-        "name": "Ethel",
-        "picture": "images/golden-retriever.jpeg",
-        "age": 2,
-        "breed": "Golden Retriever",
-        "location": "Broadlands, Oregon"
+        id: 15,
+        name: 'Terry',
+        age: 2,
+        breed: 'Jindo',
+        location: 'Dawn, Wisconsin'
     },
     {
-        "id": 15,
-        "name": "Terry",
-        "picture": "images/golden-retriever.jpeg",
-        "age": 2,
-        "breed": "Golden Retriever",
-        "location": "Dawn, Wisconsin"
+        id: 12,
+        name: 'Stevenson',
+        age: 3,
+        breed: 'French Bulldog',
+        location: 'Kingstowne, Nevada'
     }
 ]

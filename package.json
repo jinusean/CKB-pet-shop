@@ -28,6 +28,7 @@
         "@metamask/detect-provider": "^1.2.0",
         "@openzeppelin/test-helpers": "^0.5.12",
         "@polyjuice-provider/web3": "0.0.1-rc6",
+        "@types/web3-provider-engine": "^14.0.1",
         "jquery": "^3.6.0",
         "nervos-godwoken-integration": "0.0.6",
         "react-toastify": "^7.0.4",
