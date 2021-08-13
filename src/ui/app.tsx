@@ -2,8 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react'
 import Web3 from 'web3'
 import { ToastContainer, toast } from 'react-toastify'
 import { PolyjuiceHttpProvider } from '@polyjuice-provider/web3'
-import { AddressTranslator } from 'nervos-godwoken-integration'
+import { AddressTranslator, BridgeRPCHandler } from 'nervos-godwoken-integration'
 import detectEthereumProvider from '@metamask/detect-provider'
+
+import { log } from 'util'
+import ERC20JSON from '../../build/contracts/ERC20.json'
 
 import './app.scss'
 import { AdoptionWrapper } from '../lib/contracts/AdoptionWrapper'
@@ -12,6 +15,10 @@ import pets from '../pets'
 
 const LoadingIndicator = () => <span className="rotating-icon">⚙️</span>
 
+const bridgeRpc = new BridgeRPCHandler(
+    'https://force-bridge-test.ckbapp.dev/api/force-bridge/api/v1'
+)
+
 export function App() {
     const [provider, setProvider] = useState<any>()
     const [web3, setWeb3] = useState<Web3>()
@@ -19,7 +26,9 @@ export function App() {
     const [adopters, setAdopters] = useState<string[]>()
     const [contract, setContract] = useState<AdoptionWrapper>()
     const [polyjuiceAddress, setPolyjuiceAddress] = useState<string | undefined>()
+    const [sudtBalance, setSudtBalance] = useState<number>()
     const [l2Balance, setL2Balance] = useState<bigint>()
+    const [l2Address, setL2Address] = useState<string>()
     const [transactionInProgress, setTransactionInProgress] = useState(false)
     const toastId = React.useRef(null)
 
@@ -88,7 +97,6 @@ export function App() {
         }
         return adopters?.[petId]
     }
-
     useEffect(() => {
         ;(async () => {
             const _provider = await detectEthereumProvider()
@@ -170,15 +178,83 @@ export function App() {
     useEffect(() => {
         if (account) {
             const addressTranslator = new AddressTranslator()
-            setPolyjuiceAddress(addressTranslator.ethAddressToGodwokenShortAddress(account))
+            const _polyjuiceAddress = addressTranslator.ethAddressToGodwokenShortAddress(account)
+            setPolyjuiceAddress(_polyjuiceAddress)
+            addressTranslator.getLayer2DepositAddress(web3, account).then(depositAddress => {
+                setL2Address(depositAddress.addressString)
+            })
             web3.eth
-                .getBalance(account)
-                .then((_l2Balance: string) => setL2Balance(BigInt(_l2Balance)))
+                .getBalance(_polyjuiceAddress)
+                .then((_l2Balance: string) => {
+                    setL2Balance(BigInt(_l2Balance))
+                })
+                .catch(error => {
+                    console.error('geBalance error', error)
+                    setL2Balance(undefined)
+                })
+
+            // get balance in SUDT
+            const sudt = new web3.eth.Contract(
+                ERC20JSON.abi as any,
+                process.env.SUDT_PROXY_CONTRACT_ADDRESS
+            )
+            sudt.methods
+                .balanceOf(_polyjuiceAddress)
+                .call({ from: account })
+                .then(setSudtBalance)
+                .catch(error => {
+                    console.error(error)
+                    setSudtBalance(undefined)
+                })
         } else {
             setPolyjuiceAddress(undefined)
             setL2Balance(undefined)
+            setSudtBalance(undefined)
         }
     }, [account])
+
+    useEffect(() => {
+        if (!l2Address) {
+            return
+        }
+
+        async function bridging() {
+            const assets = await bridgeRpc.getAssetList()
+            // const amount = 1n * 10n ** 18n
+            // const fee = await bridgeRpc.getBridgeInNervosBridgeFee({
+            //     amount: '10000000000000',
+            //     xchainAssetIdent: asset.ident,
+            //     network: asset.network
+            // })
+            const assetInfo = assets[4]
+            const transaction = await bridgeRpc.generateBridgeInNervosTransaction({
+                asset: {
+                    amount: '10000000000000000000',
+                    ident: assets[0].ident,
+                    network: assets[0].network
+                },
+                recipient: l2Address,
+                sender: account
+            })
+            console.log('t', transaction)
+            const signed = await web3.eth.sign(transaction.rawTransaction.data, account)
+            console.log('s', signed)
+            // const tx = await bridgeRpc.sendSignedTransaction(transaction)
+
+            const balancePayload = assets.map(info => ({
+                userIdent: info.network === 'Ethereum' ? account : l2Address,
+                network: info.network,
+                assetIdent: info.ident
+            }))
+
+            const balances = await bridgeRpc.getBalance(balancePayload)
+            for (const i of balances) {
+                console.log(i)
+            }
+        }
+
+        bridging()
+    }, [l2Address, sudtBalance])
 
     useEffect(() => {
         if (transactionInProgress && !toastId.current) {
@@ -202,6 +278,10 @@ export function App() {
     }, [transactionInProgress, toastId.current])
 
     function getPetActions(petId: number) {
+        if (!l2Balance) {
+            // l2balance is required to use this service
+            return <br />
+        }
         if (account && adopters?.[petId] === ZERO_ADDRESS) {
             return (
                 <button
@@ -235,8 +315,15 @@ export function App() {
         <div>
             <div className="container">
                 <h1 className="text-center">Pet Shop</h1>
-
                 <hr />
+                {l2Balance == 0 && (
+                    <div>
+                        <b className="text-danger font-italic">
+                            Insufficient Balance. Please deposit CKB in order to use this service.
+                        </b>
+                        <hr />
+                    </div>
+                )}
                 <div>
                     {provider && !account && (
                         <button
@@ -248,14 +335,34 @@ export function App() {
                     )}
                     {account && (
                         <div>
-                            Your ETH address: <b>{account}</b>
-                            <br />
-                            Your Polyjuice address: <b>{polyjuiceAddress || ' - '}</b>
-                            <br />
-                            Nervos Layer 2 balance:{' '}
-                            <b>{l2Balance ? `${(l2Balance / 10n ** 8n).toString()} CKB` : ' - '}</b>
-                            <br />
-                            Contract address: <b>{contract?.address || '-'}</b> <br />
+                            <div className="text-truncate">
+                                Your ETH address: <b>{account}</b>
+                            </div>
+                            <div className="text-truncate">
+                                Pet shop contract address: <b>{contract?.address || '-'}</b>
+                            </div>
+                            <div className="text-truncate">
+                                Polyjuice address: <b>{polyjuiceAddress || ' - '}</b>
+                            </div>
+                            <div className="text-truncate">
+                                SUDT contract address:{' '}
+                                <b>{process.env.SUDT_PROXY_CONTRACT_ADDRESS || ' - '}</b>
+                            </div>
+                            <div className="text-truncate">
+                                SUDT balance: <b>{sudtBalance || ' - '}</b>
+                            </div>
+
+                            <div className="text-truncate">
+                                Nervos Layer 2 address: <b>{l2Address || ' - '}</b>
+                            </div>
+                            <div className="text-truncate">
+                                Nervos Layer 2 balance:{' '}
+                                <b>
+                                    {l2Balance !== undefined
+                                        ? `${(l2Balance / 10n ** 8n).toString()} CKB`
+                                        : ' - '}
+                                </b>
+                            </div>
                         </div>
                     )}
                 </div>
