@@ -32,6 +32,19 @@ export function App() {
     const [transactionInProgress, setTransactionInProgress] = useState(false)
     const toastId = React.useRef(null)
 
+    const fetchPolyjuiceBalance = useCallback(
+        async address => {
+            try {
+                const balance = await web3.eth.getBalance(address)
+                setL2Balance(BigInt(balance))
+            } catch (error) {
+                console.error(error)
+                setL2Balance(undefined)
+            }
+        },
+        [web3]
+    )
+
     const handleAccountsChanged = useCallback(
         (accounts: Array<string>) => {
             const [_account] = accounts
@@ -92,7 +105,7 @@ export function App() {
         if (adopters?.[petId] === ZERO_ADDRESS) {
             return 'None :('
         }
-        if (account && adopters?.[petId] !== account) {
+        if (adopters?.[petId].toLowerCase() === polyjuiceAddress) {
             return 'Me'
         }
         return adopters?.[petId]
@@ -119,6 +132,17 @@ export function App() {
             const _web3 = new Web3(httpProvider || Web3.givenProvider)
             setWeb3(_web3)
         })()
+
+        const intervalId = setInterval(() => {
+            if (!polyjuiceAddress) {
+                return
+            }
+            fetchPolyjuiceBalance(polyjuiceAddress)
+        }, 5000)
+
+        return () => {
+            clearInterval(intervalId)
+        }
     }, [])
 
     useEffect(() => {
@@ -180,18 +204,10 @@ export function App() {
             const addressTranslator = new AddressTranslator()
             const _polyjuiceAddress = addressTranslator.ethAddressToGodwokenShortAddress(account)
             setPolyjuiceAddress(_polyjuiceAddress)
+            fetchPolyjuiceBalance(_polyjuiceAddress)
             addressTranslator.getLayer2DepositAddress(web3, account).then(depositAddress => {
                 setL2Address(depositAddress.addressString)
             })
-            web3.eth
-                .getBalance(_polyjuiceAddress)
-                .then((_l2Balance: string) => {
-                    setL2Balance(BigInt(_l2Balance))
-                })
-                .catch(error => {
-                    console.error('geBalance error', error)
-                    setL2Balance(undefined)
-                })
 
             // get balance in SUDT
             const sudt = new web3.eth.Contract(
@@ -212,49 +228,6 @@ export function App() {
             setSudtBalance(undefined)
         }
     }, [account])
-
-    useEffect(() => {
-        if (!l2Address) {
-            return
-        }
-
-        async function bridging() {
-            const assets = await bridgeRpc.getAssetList()
-            // const amount = 1n * 10n ** 18n
-            // const fee = await bridgeRpc.getBridgeInNervosBridgeFee({
-            //     amount: '10000000000000',
-            //     xchainAssetIdent: asset.ident,
-            //     network: asset.network
-            // })
-            const assetInfo = assets[4]
-            const transaction = await bridgeRpc.generateBridgeInNervosTransaction({
-                asset: {
-                    amount: '10000000000000000000',
-                    ident: assets[0].ident,
-                    network: assets[0].network
-                },
-                recipient: l2Address,
-                sender: account
-            })
-            console.log('t', transaction)
-            const signed = await web3.eth.sign(transaction.rawTransaction.data, account)
-            console.log('s', signed)
-            // const tx = await bridgeRpc.sendSignedTransaction(transaction)
-
-            const balancePayload = assets.map(info => ({
-                userIdent: info.network === 'Ethereum' ? account : l2Address,
-                network: info.network,
-                assetIdent: info.ident
-            }))
-
-            const balances = await bridgeRpc.getBalance(balancePayload)
-            for (const i of balances) {
-                console.log(i)
-            }
-        }
-
-        bridging()
-    }, [l2Address, sudtBalance])
 
     useEffect(() => {
         if (transactionInProgress && !toastId.current) {
@@ -316,10 +289,25 @@ export function App() {
             <div className="container">
                 <h1 className="text-center">Pet Shop</h1>
                 <hr />
-                {l2Balance == 0 && (
+                <p>
+                    Click{' '}
+                    <a
+                        href="https://force-bridge-test.ckbapp.dev/bridge/Ethereum/Nervos?xchain-asset=0x0000000000000000000000000000000000000000"
+                        target="_blank"
+                    >
+                        here
+                    </a>{' '}
+                    to transfer funds to your layer 2 address and make sure to specify your
+                    receiving address in the recipient field: <br />
+                    <b>{l2Address} </b>
+                </p>
+
+                <hr />
+                {l2Address && !l2Balance && (
                     <div>
                         <b className="text-danger font-italic">
-                            Insufficient Balance. Please deposit CKB in order to use this service.
+                            Insufficient Balance. Please transfer ETH to your l2 address using the
+                            instructions above.
                         </b>
                         <hr />
                     </div>
